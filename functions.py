@@ -2,6 +2,8 @@ import tkinter
 import pygame
 from tkinter import messagebox, PhotoImage
 
+NEXT = pygame.USEREVENT + 0
+casual = False
 index = 0
 sound_running = True
 stop_thread = False

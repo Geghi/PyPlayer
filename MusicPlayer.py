@@ -1,5 +1,6 @@
 import ctypes
 import os
+import random
 
 from songInfo import *
 from functions import *
@@ -12,12 +13,13 @@ from os.path import realpath
 from tkinter.filedialog import askdirectory
 from tkinter import *
 
-from mutagen.id3 import ID3
+from mutagen.id3 import ID3, ID3NoHeaderError
 from mutagen.mp3 import MP3
 
 # Initializing layout and mixer.
 root = Tk()
 init_root(root)
+pygame.init()
 mixer.pre_init(44100, 16, 2, 4096)
 mixer.init()
 
@@ -37,10 +39,40 @@ def on_closing():
     root.destroy()
 
 
+def directory_chooser():
+    global list_of_songs
+    global real_names
+    global list_directory
+    global index
+
+    # Reset lists.
+    index = 0
+    list_directory = []
+    list_of_songs = []
+    real_names = []
+
+    directory = askdirectory()
+    os.chdir(directory)
+    list_directory.append(directory)
+    print("LOADING SONGS FROM DIRECTORY AND SUB-DIRECTORIES.")
+    find_songs(directory)
+
+    print("LOADING COMPLETE, ENJOY THE MUSIC")
+    # Loading and starting the first song.
+    load_song()
+
+    # Show the list of songs
+    listbox.delete(0, 'end')
+    real_names.reverse()
+    for song in real_names:
+        listbox.insert(0, song)
+    real_names.reverse()
+
+
 # File sub menu
 sub_menu = Menu(menu_bar, tearoff=0)
 menu_bar.add_cascade(label="File", menu=sub_menu)
-sub_menu.add_command(label="Open")
+sub_menu.add_command(label="Open", command=directory_chooser)
 sub_menu.add_command(label="Exit", command=on_closing)
 
 # About us sub menu
@@ -105,7 +137,8 @@ def next_song(event):
     index += 1
     if index >= len(list_of_songs):
         index = 0
-    load_song(list_of_songs)
+    mixer.music.set_endevent()
+    load_song()
 
 
 def previous_song(event):
@@ -114,7 +147,8 @@ def previous_song(event):
     index -= 1
     if index < 0:
         index = len(list_of_songs) - 1
-    load_song(list_of_songs)
+    mixer.music.set_endevent()
+    load_song()
 
 
 def play_pause_song(event):
@@ -131,13 +165,17 @@ def play_pause_song(event):
         status_bar['text'] = "Playing music"
 
 
-def load_song(songs):
+def load_song():
+    global list_of_songs
     global stop_thread
     mixer.music.stop()
     stop_thread = True
-    os.chdir(songs[index].songPath)
-    mixer.music.load(songs[index].song)
+    os.chdir(list_of_songs[index].songPath)
+    print("Play: " + list_of_songs[index].song)
+    print("Title: " + real_names[index] + "\n")
+    mixer.music.load(list_of_songs[index].song)
     mixer.music.play()
+    mixer.music.set_endevent(NEXT)
     update_song_info()
 
 
@@ -146,7 +184,7 @@ def load_selected_song(event):
     selected_song = listbox.curselection()
     selected_song = int(selected_song[0])
     index = selected_song
-    load_song(list_of_songs)
+    load_song()
 
 
 def update_song_info():
@@ -212,12 +250,16 @@ def find_songs(directory):
             # MP3 file found
             if file.endswith(".mp3"):
                 song_path = os.path.realpath(file)
-                audio = ID3(song_path)
-                real_names.append(audio['TIT2'].text[0])
 
                 # Store song name and directory
                 song_file = songInfo(file, directory)
                 list_of_songs.append(song_file)
+
+                try:
+                    audio = ID3(song_path)
+                    real_names.append(audio['TIT2'].text[0])
+                except ID3NoHeaderError:
+                    real_names.append(song_file.song)
 
             # Directory file found
             else:
@@ -232,18 +274,6 @@ def find_songs(directory):
                     os.chdir(directory)
 
 
-def directory_chooser():
-    directory = askdirectory()
-    os.chdir(directory)
-    list_directory.append(directory)
-    print("LOADING SONGS FROM DIRECTORY AND SUB-DIRECTORIES.")
-    find_songs(directory)
-
-    print("LOADING COMPLETE, ENJOY THE MUSIC")
-    # Initialize Mixer
-    load_song(list_of_songs)
-
-
 next_button.bind("<Button-1>", next_song)
 previous_button.bind("<Button-1>", previous_song)
 play_pause_button.bind("<Button-1>", play_pause_song)
@@ -252,16 +282,44 @@ listbox.bind("<<ListboxSelect>>", load_selected_song)
 # Select the best songs directory
 directory_chooser()
 
-# Show the list of songs
-real_names.reverse()
-for song in real_names:
-    listbox.insert(0, song)
-real_names.reverse()
-
 # Show playing song's name.
 song_name.pack()
 time_playing.grid(row=0, column=0, padx=10)
 song_length.grid(row=0, column=1, padx=10)
 
+
+def pick_new_index():
+    global index
+    new_index = index
+    while new_index == index:
+        new_index = random.randrange(0, len(list_of_songs))
+    index = new_index
+
+def check_event():
+    global index
+    for event in pygame.event.get():
+        if event.type == NEXT:
+            print('music end event')
+            if casual:
+                if len(list_of_songs) > 1:
+                    pick_new_index()
+            else:
+                if len(list_of_songs) > index + 1:
+                    index += 1
+                else:
+                    index = 0
+            print(index)
+            load_song()
+
+    root.after(100, check_event)
+
+
+check_event()
+
 root.protocol("WM_DELETE_WINDOW", on_closing)
 root.mainloop()
+
+
+
+
+
