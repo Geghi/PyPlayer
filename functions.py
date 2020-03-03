@@ -4,6 +4,7 @@ from tkinter import messagebox, PhotoImage
 
 index = 0
 sound_running = True
+stop_thread = False
 mixer = pygame.mixer
 list_directory = []
 list_of_songs = []
