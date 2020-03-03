@@ -28,6 +28,8 @@ play_image = PhotoImage(file="images/play_button.png").subsample(3)
 pause_image = PhotoImage(file="images/pause_button.png").subsample(3)
 next_song_image = PhotoImage(file="images/next_button.png").subsample(3)
 previous_song_image = PhotoImage(file="images/previous_button.png").subsample(3)
+add_shuffling_image = PhotoImage(file="images/shuffle_button.png").subsample(12)
+remove_shuffling_image = PhotoImage(file="images/remove_shuffle_button.png").subsample(12)
 
 # Menu initialization
 menu_bar = Menu(root)
@@ -55,13 +57,16 @@ def directory_chooser():
     os.chdir(directory)
     list_directory.append(directory)
     print("LOADING SONGS FROM DIRECTORY AND SUB-DIRECTORIES.")
-    find_songs(directory)
+    find_songs_in_directory(directory)
 
     print("LOADING COMPLETE, ENJOY THE MUSIC")
     # Loading and starting the first song.
-    load_song()
+    play_new_music()
 
-    # Show the list of songs
+    add_songs_to_listbox()
+
+
+def add_songs_to_listbox():
     listbox.delete(0, 'end')
     real_names.reverse()
     for song in real_names:
@@ -69,13 +74,13 @@ def directory_chooser():
     real_names.reverse()
 
 
-# File sub menu
+# File - sub menu
 sub_menu = Menu(menu_bar, tearoff=0)
 menu_bar.add_cascade(label="File", menu=sub_menu)
 sub_menu.add_command(label="Open", command=directory_chooser)
 sub_menu.add_command(label="Exit", command=on_closing)
 
-# About us sub menu
+# About us  - sub menu
 sub_menu = Menu(menu_bar, tearoff=0)
 menu_bar.add_cascade(label="Help", menu=sub_menu)
 sub_menu.add_command(label="About Us", command=about_us)
@@ -124,6 +129,10 @@ play_pause_button.grid(row=0, column=1, padx=10)
 next_button = Button(middle_frame, image=next_song_image)
 next_button.grid(row=0, column=2, padx=10)
 
+# Add/Remove shuffle Button
+shuffle_button = Button(middle_frame, image=add_shuffling_image)
+shuffle_button.grid(row=0, column=3, padx=10)
+
 # Volume bar
 scale = Scale(root, from_=0, to=100, orient=HORIZONTAL, command=set_volume)
 scale.set(70)
@@ -134,11 +143,15 @@ scale.pack()
 def next_song(event):
     global index
     global sound_running
-    index += 1
-    if index >= len(list_of_songs):
-        index = 0
+    if shuffle_flag:
+        if len(list_of_songs) > 1:
+            select_new_index()
+    else:
+        index += 1
+        if index >= len(list_of_songs):
+            index = 0
     mixer.music.set_endevent()
-    load_song()
+    play_new_music()
 
 
 def previous_song(event):
@@ -148,7 +161,14 @@ def previous_song(event):
     if index < 0:
         index = len(list_of_songs) - 1
     mixer.music.set_endevent()
-    load_song()
+    play_new_music()
+
+
+def switch_shuffle_flag(event):
+    global shuffle_flag
+    shuffle_button['image'] = add_shuffling_image if shuffle_flag else remove_shuffling_image
+    shuffle_flag = not shuffle_flag
+
 
 
 def play_pause_song(event):
@@ -165,12 +185,13 @@ def play_pause_song(event):
         status_bar['text'] = "Playing music"
 
 
-def load_song():
+def play_new_music():
     global list_of_songs
     global stop_thread
     mixer.music.stop()
     stop_thread = True
     os.chdir(list_of_songs[index].songPath)
+    print("Index:", + index + 1)
     print("Play: " + list_of_songs[index].song)
     print("Title: " + real_names[index] + "\n")
     mixer.music.load(list_of_songs[index].song)
@@ -184,7 +205,8 @@ def load_selected_song(event):
     selected_song = listbox.curselection()
     selected_song = int(selected_song[0])
     index = selected_song
-    load_song()
+    mixer.music.set_endevent()
+    play_new_music()
 
 
 def update_song_info():
@@ -235,10 +257,12 @@ def start_count(length):
             continue
 
 
-def find_songs(directory):
+def find_songs_in_directory(directory):
     global real_names
     global list_of_songs
     global list_directory
+
+    mixer.music.set_endevent()
 
     # The directory is NOT empty
     if len(os.listdir(directory)) != 0:
@@ -268,7 +292,7 @@ def find_songs(directory):
                     list_directory.append(path)
 
                     # Browse in the directory recursively
-                    find_songs(path)
+                    find_songs_in_directory(path)
 
                     # set the directory back to the previous one to keep browsing
                     os.chdir(directory)
@@ -277,6 +301,7 @@ def find_songs(directory):
 next_button.bind("<Button-1>", next_song)
 previous_button.bind("<Button-1>", previous_song)
 play_pause_button.bind("<Button-1>", play_pause_song)
+shuffle_button.bind("<Button-1>", switch_shuffle_flag)
 listbox.bind("<<ListboxSelect>>", load_selected_song)
 
 # Select the best songs directory
@@ -288,7 +313,7 @@ time_playing.grid(row=0, column=0, padx=10)
 song_length.grid(row=0, column=1, padx=10)
 
 
-def pick_new_index():
+def select_new_index():
     global index
     new_index = index
     while new_index == index:
@@ -299,20 +324,17 @@ def check_event():
     global index
     for event in pygame.event.get():
         if event.type == NEXT:
-            print('music end event')
-            if casual:
+            if shuffle_flag:
                 if len(list_of_songs) > 1:
-                    pick_new_index()
+                    select_new_index()
             else:
                 if len(list_of_songs) > index + 1:
                     index += 1
                 else:
                     index = 0
-            print(index)
-            load_song()
+            play_new_music()
 
     root.after(100, check_event)
-
 
 check_event()
 

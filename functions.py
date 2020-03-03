@@ -3,7 +3,7 @@ import pygame
 from tkinter import messagebox, PhotoImage
 
 NEXT = pygame.USEREVENT + 0
-casual = False
+shuffle_flag = False
 index = 0
 sound_running = True
 stop_thread = False
@@ -14,7 +14,7 @@ real_names = []
 
 
 def init_root(root):
-    root.minsize(400, 400)
+    root.minsize(400, 450)
     root.title("PyPlayer")
     root.iconbitmap(r'Logo.ico')
 
