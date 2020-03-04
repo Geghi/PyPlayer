@@ -27,6 +27,7 @@ mixer.init()
 play_image = PhotoImage(file="images/play_button.png").subsample(3)
 pause_image = PhotoImage(file="images/pause_button.png").subsample(3)
 next_song_image = PhotoImage(file="images/next_button.png").subsample(3)
+stop_song_image = PhotoImage(file="images/next_button.png").subsample(3)
 previous_song_image = PhotoImage(file="images/previous_button.png").subsample(3)
 add_shuffling_image = PhotoImage(file="images/shuffle_button.png").subsample(12)
 remove_shuffling_image = PhotoImage(file="images/remove_shuffle_button.png").subsample(12)
@@ -117,27 +118,38 @@ song_length = Label(bottom_frame, textvariable=playing_song_length)
 middle_frame = Frame(root)
 middle_frame.pack(pady=10)
 
+# Stop Song button
+stop_button = Button(middle_frame, image=stop_song_image)
+stop_button.grid(row=0, column=0, padx=10)
+
 # Previous Song Button
 previous_button = Button(middle_frame, image=previous_song_image)
-previous_button.grid(row=0, column=0, padx=10)
+previous_button.grid(row=0, column=1, padx=10)
 
 # Play/Pause Song Button
 play_pause_button = Button(middle_frame, image=pause_image)
-play_pause_button.grid(row=0, column=1, padx=10)
+play_pause_button.grid(row=0, column=2, padx=10)
 
 # Next Song button
 next_button = Button(middle_frame, image=next_song_image)
-next_button.grid(row=0, column=2, padx=10)
+next_button.grid(row=0, column=3, padx=10)
 
 # Add/Remove shuffle Button
 shuffle_button = Button(middle_frame, image=add_shuffling_image)
-shuffle_button.grid(row=0, column=3, padx=10)
+shuffle_button.grid(row=0, column=4, padx=10)
 
 # Volume bar
 scale = Scale(root, from_=0, to=100, orient=HORIZONTAL, command=set_volume)
 scale.set(70)
 mixer.music.set_volume(0.7)
 scale.pack()
+
+
+def stop_song(event):
+    mixer.music.set_endevent()
+    mixer.music.stop()
+    status_bar['text'] = "Music Stopped"
+    play_pause_button['image'] = play_image
 
 
 def next_song(event):
@@ -170,10 +182,11 @@ def switch_shuffle_flag(event):
     shuffle_flag = not shuffle_flag
 
 
-
 def play_pause_song(event):
     global sound_running
-    if sound_running:
+    if not mixer.music.get_busy():
+        play_new_music()
+    elif sound_running:
         play_pause_button['image'] = play_image
         mixer.music.pause()
         sound_running = False
@@ -281,7 +294,10 @@ def find_songs_in_directory(directory):
 
                 try:
                     audio = ID3(song_path)
-                    real_names.append(audio['TIT2'].text[0])
+                    if 'TIT2' in audio:
+                        real_names.append(audio['TIT2'].text[0])
+                    else:
+                        real_names.append(song_file.song)
                 except ID3NoHeaderError:
                     real_names.append(song_file.song)
 
@@ -298,6 +314,7 @@ def find_songs_in_directory(directory):
                     os.chdir(directory)
 
 
+stop_button.bind("<Button-1>", stop_song)
 next_button.bind("<Button-1>", next_song)
 previous_button.bind("<Button-1>", previous_song)
 play_pause_button.bind("<Button-1>", play_pause_song)
