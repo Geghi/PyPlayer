@@ -11,10 +11,11 @@ mixer = pygame.mixer
 list_directory = []
 list_of_songs = []
 real_names = []
+starting_point = 0
 
 
 def init_root(root):
-    root.minsize(400, 450)
+    root.minsize(420, 400)
     root.title("PyPlayer")
     root.iconbitmap(r'Logo.ico')
 
@@ -25,12 +26,9 @@ def about_us():
 
 
 def set_volume(value):
-    volume = int(value) / 100
+    volume = float(value)/100
     mixer.music.set_volume(volume)
 
 
 def queue_song():
     mixer.music.queue(list_of_songs[index + 1])
-
-
-
