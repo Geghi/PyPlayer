@@ -1,4 +1,4 @@
 # PyPlayer
 
-This is a media player application written in python.
+This is a music player application written in python.
 
