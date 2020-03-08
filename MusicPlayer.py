@@ -75,7 +75,6 @@ def on_closing():
     global stop_thread
     global mixer
 
-    mixer.music.fadeout(0)
     stop_thread = True
     mixer.music.stop()
     root.destroy()
@@ -176,7 +175,6 @@ def next_song(event):
 def previous_song(event):
     global index
     global mixer
-    print(time_bar.get())
     if time_bar.get() < 5:
         index -= 1
         if index < 0:
@@ -229,9 +227,15 @@ def play_new_music():
 
 def play_at_selected_time(event):
     global starting_point
+    global isDraggingTimeBar
     mixer.music.set_endevent()
     starting_point = time_bar.get()
+    isDraggingTimeBar = False
     play_new_music()
+
+def dragging_time_bar(event):
+    global isDraggingTimeBar
+    isDraggingTimeBar = True
 
 
 def load_selected_song(event):
@@ -288,12 +292,14 @@ def start_count(length):
 
 def set_current_time_format(current_time):
     global time_bar
+    global isDraggingTimeBar
     minutes, seconds = divmod(current_time, 60)
     minutes = round(minutes)
     seconds = round(seconds)
     time_format = '{:02d}:{:02d}'.format(minutes, seconds)
     song_time_playing.set("Current Time - " + time_format)
-    time_bar.set(current_time)
+    if not isDraggingTimeBar:
+        time_bar.set(current_time)
 
 
 def find_songs_in_directory(directory):
@@ -340,16 +346,15 @@ def select_new_index():
 def check_song_end_event():
     global index
     for event in pygame.event.get():
-        if event.type == NEXT and shuffle_flag:
-            if len(list_of_songs) > 1:
+        if event.type == NEXT:
+            if len(list_of_songs) > 1 and shuffle_flag:
                 select_new_index()
-        else:
-            if len(list_of_songs) > index + 1:
+            elif len(list_of_songs) > index + 1:
                 index += 1
             else:
                 index = 0
-        play_new_music()
-    root.after(100, check_song_end_event)
+            play_new_music()
+    root.after(200, check_song_end_event)
 
 
 stop_button.bind("<Button-1>", stop_song)
@@ -359,8 +364,8 @@ play_pause_button.bind("<Button-1>", play_pause_song)
 shuffle_button.bind("<Button-1>", switch_shuffle_flag)
 listbox.bind("<<ListboxSelect>>", load_selected_song)
 time_bar.bind("<ButtonRelease-1>", play_at_selected_time)
+time_bar.bind("<Button-1>", dragging_time_bar)
 
-directory_chooser()
 check_song_end_event()
 
 root.protocol("WM_DELETE_WINDOW", on_closing)

@@ -12,6 +12,7 @@ list_directory = []
 list_of_songs = []
 real_names = []
 starting_point = 0
+isDraggingTimeBar = False
 
 
 def init_root(root):
